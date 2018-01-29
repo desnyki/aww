@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">aww</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="loading_posts_error">Error while loading posts</string>
+
+    <string name="completed_posts_cleared">Posts cleared</string>
+    <string name="no_posts_all">You have no posts!</string>
+    <string name="no_posts_add">Add a post item +</string>
+    <string name="successfully_saved_post_message">Post saved</string>
+</resources>

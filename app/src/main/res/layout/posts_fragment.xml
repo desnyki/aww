@@ -1,0 +1,37 @@
+<com.desnyki.aww.posts.ScrollChildSwipeRefreshLayout
+    android:id="@+id/refresh_layout"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.desnyki.aww.posts.PostsFragment">
+
+    <RelativeLayout
+        android:id="@+id/posts_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="true"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:id="@+id/posts_ll"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+            <android.support.v7.widget.RecyclerView
+                android:id="@+id/posts_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/no_posts"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:orientation="vertical">
+
+        </LinearLayout>
+    </RelativeLayout>
+
+</com.desnyki.aww.posts.ScrollChildSwipeRefreshLayout>
