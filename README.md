@@ -7,13 +7,13 @@ This app downloads reddit posts from /r/aww and dispalys them in a list using th
 ## Libraries 
 
 * MVVM
-* SQLBRITE
+* SQLBrite
 * RxJava2, RxAndroid
 * Picasso
 
 ## Credit
 
- *[Android Architecture Blueprints](https://github.com/googlesamples/android-architecture)
+ * [Android Architecture Blueprints](https://github.com/googlesamples/android-architecture)
 
 ## TODO
 
