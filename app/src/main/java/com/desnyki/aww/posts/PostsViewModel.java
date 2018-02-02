@@ -15,10 +15,13 @@ import com.desnyki.aww.util.schedulers.BaseSchedulerProvider;
 
 import java.util.List;
 
-import rx.Completable;
-import rx.Observable;
-import rx.subjects.BehaviorSubject;
-import rx.subjects.PublishSubject;
+
+import io.reactivex.Completable;
+import io.reactivex.Flowable;
+import io.reactivex.Observable;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.subjects.BehaviorSubject;
+import io.reactivex.subjects.PublishSubject;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -36,13 +39,8 @@ public class PostsViewModel {
     @NonNull
     private final BaseSchedulerProvider mSchedulerProvider;
 
-    // using a BehaviourSubject because we are interested in the last object that was emitted before
-    // subscribing. Like this we ensure that the loading indicator has the correct visibility.
     private final BehaviorSubject<Boolean> mLoadingIndicatorSubject;
 
-
-    // using a PublishSubject because we are not interested in the last object that was emitted
-    // before subscribing. Like this we avoid displaying the snackbar multiple times
     @NonNull
     private final PublishSubject<Integer> mSnackbarText;
 
@@ -50,14 +48,14 @@ public class PostsViewModel {
                           @NonNull BaseSchedulerProvider schedulerProvider) {
         mPostsRepository = postsRepository;
         mSchedulerProvider = checkNotNull(schedulerProvider, "SchedulerProvider cannot be null");
-        mLoadingIndicatorSubject = BehaviorSubject.create(false);
+        mLoadingIndicatorSubject = BehaviorSubject.create();
         mSnackbarText = PublishSubject.create();
     }
 
     @NonNull
     public Observable<PostsUIModel> getUIModel() {
         return getPostItems()
-                .doOnSubscribe(() -> mLoadingIndicatorSubject.onNext(true))
+                .doOnSubscribe(__ -> mLoadingIndicatorSubject.onNext(true))
                 .doOnNext(__ -> mLoadingIndicatorSubject.onNext(false))
                 .doOnError(__ -> mSnackbarText.onNext(R.string.loading_posts_error))
                 .map(this::constructPostsModel);
@@ -72,12 +70,12 @@ public class PostsViewModel {
 
         return new PostsUIModel(isPostsListVisible, posts, isNoPostsViewVisible);
     }
-    private Observable<List<PostItem>> getPostItems() {
+    private Flowable<List<PostItem>> getPostItems() {
         Log.d(TAG, "getPostItems");
         return mPostsRepository.getPosts()
-                .flatMap( post -> Observable.from(post)
-                        .map(this::constructPostItem)
-                        .toList());
+                .flatMap(Flowable::fromIterable)
+                .map(this::constructPostItem).toList();
+
     }
 
     @NonNull
@@ -133,7 +131,7 @@ public class PostsViewModel {
      */
     @NonNull
     public Observable<Integer> getSnackbarMessage() {
-        return mSnackbarText.asObservable();
+        return mSnackbarText.hide();
     }
 
     /**
@@ -141,6 +139,6 @@ public class PostsViewModel {
      */
     @NonNull
     public Observable<Boolean> getLoadingIndicatorVisibility() {
-        return mLoadingIndicatorSubject.asObservable();
+        return mLoadingIndicatorSubject.hide();
     }
 }

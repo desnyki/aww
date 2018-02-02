@@ -25,12 +25,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 import rx.Completable;
 import rx.Observable;
-import rx.android.schedulers.AndroidSchedulers;
-import rx.functions.Action1;
-import rx.functions.Func0;
-import rx.schedulers.Schedulers;
 
-import static android.content.ContentValues.TAG;
 
 /**
  * Created by desnyki on 25/01/18.
@@ -59,7 +54,7 @@ public class PostsRemoteDataSource implements PostsDataSource {
     @Override
     public Observable<List<Post>> getPosts() {
         if(posts.isEmpty())
-            return getPostImageData();
+            return Observable.fromCallable(() -> getPostImageData());
         else
             return Observable.from(posts).toList();
     }
@@ -86,8 +81,7 @@ public class PostsRemoteDataSource implements PostsDataSource {
 
     OkHttpClient client;
 
-    public Observable<List<Post>> getPostImageData(){
-        Log.d(TAG, "getPostImageData");
+    public List<Post> getPostImageData(){
         final String mURI = "https://www.reddit.com/r/aww/.json";
         String mURLreturn;
         client = new OkHttpClient();
@@ -139,7 +133,7 @@ public class PostsRemoteDataSource implements PostsDataSource {
                 if(url.length()>0&&!isLocked)
                 posts.add(new Post(title,url,commentCount,upvoteCount,id));
             }
-            return Observable.from(posts).toList();
+            return posts;
         } catch (IOException e) {
             e.printStackTrace();
         } catch (JSONException e) {

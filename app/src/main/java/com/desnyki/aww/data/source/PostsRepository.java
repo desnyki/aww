@@ -10,11 +10,17 @@ import com.desnyki.aww.data.source.remote.PostsRemoteDataSource;
 import com.desnyki.aww.posts.PostsViewModel;
 import com.desnyki.aww.util.schedulers.BaseSchedulerProvider;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import rx.Completable;
-import rx.Observable;
+import io.reactivex.Completable;
+import io.reactivex.Flowable;
+import io.reactivex.Observable;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -59,18 +65,10 @@ public class PostsRepository implements PostsDataSource {
     }
 
 
-    //    @NonNull
-//    @Override
-//    public Observable<List<Post>> getPosts() {
-//        return mPostsLocalDataSource.getPosts();
-//    }
     @NonNull
     @Override
-    public Observable<List<Post>> getPosts() {
-        return Observable.just(0)
-                .subscribeOn(mBaseSchedulerProvider.io())
-                .flatMap(__ -> mPostsRemoteDataSource.getPosts())
-                        .subscribeOn(mBaseSchedulerProvider.io());
+    public Flowable<List<Post>> getPosts() {
+        return mPostsRemoteDataSource.getPosts();
     }
 
     @NonNull
@@ -93,11 +91,12 @@ public class PostsRepository implements PostsDataSource {
     public Completable refreshPosts() {
         Log.d(TAG, "refreshPosts");
 
-        return Observable.just(0)
-                .subscribeOn(mBaseSchedulerProvider.io())
-                .flatMap(__ -> mPostsRemoteDataSource.getPosts()
-                        .subscribeOn(mBaseSchedulerProvider.io())
-                        .doOnNext(mPostsLocalDataSource::savePosts))
-                .toCompletable();
+//        return Observable.just(0)
+//                .subscribeOn(mBaseSchedulerProvider.io())
+//                .flatMap(__ -> mPostsRemoteDataSource.getPosts()
+//                        .subscribeOn(mBaseSchedulerProvider.io())
+//                        .doOnNext(mPostsLocalDataSource::savePosts))
+//                .toCompletable();
+        return null;
     }
 }

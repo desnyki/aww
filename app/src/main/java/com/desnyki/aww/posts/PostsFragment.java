@@ -26,9 +26,10 @@ import com.desnyki.aww.data.source.PostsRepository;
 import java.util.ArrayList;
 import java.util.List;
 
-import rx.android.schedulers.AndroidSchedulers;
-import rx.schedulers.Schedulers;
-import rx.subscriptions.CompositeSubscription;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.schedulers.Schedulers;
+import io.reactivex.disposables.Disposable;
 
 public class PostsFragment extends Fragment {
     private static final String TAG = PostsFragment.class.getSimpleName();
@@ -43,7 +44,7 @@ public class PostsFragment extends Fragment {
 
     private LinearLayout mPostsView;
 
-    private CompositeSubscription mSubscription = new CompositeSubscription();
+    private CompositeDisposable mSubscription = new CompositeDisposable();
 
     public PostsFragment() {
         // Requires empty public constructor
@@ -65,27 +66,19 @@ public class PostsFragment extends Fragment {
                              Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.posts_fragment, container, false);
 
-        // Set up posts view
         mRecyclerView = root.findViewById(R.id.posts_list);
         mRecyclerView.setAdapter(mListAdapter);
 
+//        mRecyclerView.setHasFixedSize(true);
 
-        // use this setting to improve performance if you know that changes
-        // in content do not change the layout size of the RecyclerView
-        // mRecyclerView.setHasFixedSize(true);
-
-        // use a linear layout manager
         mLayoutManager = new LinearLayoutManager(getActivity());
         mRecyclerView.setLayoutManager(mLayoutManager);
 
-        // specify an adapter (see also next example)
         mListAdapter = new PostsAdapter(new ArrayList<>(0), getContext());
         mRecyclerView.setAdapter(mListAdapter);
         mPostsView = root.findViewById(R.id.posts_ll);
 
         setupSwipeRefreshLayout(root, mRecyclerView);
-
-//        setHasOptionsMenu(true);
 
         mViewModel = PostsModule.createPostsViewModel(getActivity());
         mViewModel.restoreState(savedInstanceState);
@@ -106,13 +99,8 @@ public class PostsFragment extends Fragment {
     }
 
     private void bindViewModel() {
-        // using a CompositeSubscription to gather all the subscriptions, so all of them can be
-        // later unsubscribed together
-        mSubscription = new CompositeSubscription();
+        mSubscription = new CompositeDisposable();
 
-        // The ViewModel holds an observable containing the state of the UI.
-        // subscribe to the emissions of the Ui Model
-        // update the view at every emission fo the Ui Model
         mSubscription.add(mViewModel.getUIModel()
                 .subscribeOn(Schedulers.computation())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -123,8 +111,6 @@ public class PostsFragment extends Fragment {
                         error -> Log.e(TAG, "Error loading posts", error)
                 ));
 
-        // subscribe to the emissions of the snackbar text
-        // every time the snackbar text emits, show the snackbar
         mSubscription.add(mViewModel.getSnackbarMessage()
                 .subscribeOn(Schedulers.computation())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -135,8 +121,6 @@ public class PostsFragment extends Fragment {
                         error -> Log.d(TAG, "Error showing snackbar", error)
                 ));
 
-        // subscribe to the emissions of the loading indicator visibility
-        // for every emission, update the visibility of the loading indicator
         mSubscription.add(mViewModel.getLoadingIndicatorVisibility()
                 .subscribeOn(Schedulers.computation())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -203,7 +187,6 @@ public class PostsFragment extends Fragment {
             return;
         }
         final SwipeRefreshLayout srl = getView().findViewById(R.id.refresh_layout);
-        // Make sure setRefreshing() is called after the layout is done with everything else.
         srl.post(() -> srl.setRefreshing(isVisible));
     }
 

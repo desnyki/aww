@@ -19,8 +19,9 @@ import com.squareup.sqlbrite.SqlBrite;
 
 import java.util.List;
 
-import rx.Completable;
-import rx.Observable;
+
+import io.reactivex.Completable;
+import io.reactivex.Observable;
 import rx.functions.Func1;
 
 import static com.google.common.base.Preconditions.checkNotNull;
