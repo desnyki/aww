@@ -1,6 +1,5 @@
 package com.desnyki.aww.posts;
 
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -17,11 +16,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ListView;
-import android.widget.TextView;
 
 import com.desnyki.aww.R;
-import com.desnyki.aww.data.source.PostsRepository;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +25,6 @@ import java.util.List;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.schedulers.Schedulers;
-import io.reactivex.disposables.Disposable;
 
 public class PostsFragment extends Fragment {
     private static final String TAG = PostsFragment.class.getSimpleName();
@@ -44,7 +39,7 @@ public class PostsFragment extends Fragment {
 
     private LinearLayout mPostsView;
 
-    private CompositeDisposable mSubscription = new CompositeDisposable();
+    private CompositeDisposable mCompositeDisposable = new CompositeDisposable();
 
     public PostsFragment() {
         // Requires empty public constructor
@@ -69,7 +64,7 @@ public class PostsFragment extends Fragment {
         mRecyclerView = root.findViewById(R.id.posts_list);
         mRecyclerView.setAdapter(mListAdapter);
 
-//        mRecyclerView.setHasFixedSize(true);
+        mRecyclerView.setHasFixedSize(true);
 
         mLayoutManager = new LinearLayoutManager(getActivity());
         mRecyclerView.setLayoutManager(mLayoutManager);
@@ -99,10 +94,10 @@ public class PostsFragment extends Fragment {
     }
 
     private void bindViewModel() {
-        mSubscription = new CompositeDisposable();
+        mCompositeDisposable = new CompositeDisposable();
 
-        mSubscription.add(mViewModel.getUIModel()
-                .subscribeOn(Schedulers.computation())
+        mCompositeDisposable.add(mViewModel.getUIModel()
+                .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         //onNext
@@ -111,7 +106,7 @@ public class PostsFragment extends Fragment {
                         error -> Log.e(TAG, "Error loading posts", error)
                 ));
 
-        mSubscription.add(mViewModel.getSnackbarMessage()
+        mCompositeDisposable.add(mViewModel.getSnackbarMessage()
                 .subscribeOn(Schedulers.computation())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
@@ -121,7 +116,7 @@ public class PostsFragment extends Fragment {
                         error -> Log.d(TAG, "Error showing snackbar", error)
                 ));
 
-        mSubscription.add(mViewModel.getLoadingIndicatorVisibility()
+        mCompositeDisposable.add(mViewModel.getLoadingIndicatorVisibility()
                 .subscribeOn(Schedulers.computation())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
@@ -132,28 +127,11 @@ public class PostsFragment extends Fragment {
                 ));
     }
 
-    private void forceUpdate() {
-        Log.d(TAG, "forceUpdate");
-        mSubscription.add(mViewModel.forceUpdatePosts()
-                .subscribeOn(Schedulers.computation())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(
-                        //onCompleted
-                        () -> {
-//                            Log.d(TAG, "forceUpdateComepleted: " +  mListAdapter.getItemCount());
-                            // nothing to do here
-                        },
-                        //onError
-                        error -> Log.d(TAG, "Error refreshing posts", error)
-                ));
-    }
     private void unbindViewModel() {
-        // un subscribing from all the subscriptions to ensure we don't have any memory leaks
-        mSubscription.unsubscribe();
+        mCompositeDisposable.clear();
     }
 
     private void updateView(PostsUIModel model) {
-        Log.d(TAG, "updateView");
         int postsListVisibility = model.isPostsListVisible() ? View.VISIBLE : View.GONE;
         mPostsView.setVisibility(postsListVisibility);
 
@@ -170,12 +148,22 @@ public class PostsFragment extends Fragment {
                 ContextCompat.getColor(getActivity(), R.color.colorAccent),
                 ContextCompat.getColor(getActivity(), R.color.colorPrimaryDark)
         );
-        // Set the scrolling view in the custom SwipeRefreshLayout.
+
         swipeRefreshLayout.setScrollUpChild(listView);
-
-        swipeRefreshLayout.setOnRefreshListener(this::forceUpdate);
+        swipeRefreshLayout.setOnRefreshListener(this::refreshPosts);
     }
-
+    
+    private void refreshPosts() {
+        mCompositeDisposable.add(mViewModel.refreshPosts()
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        //onNext
+                        this::updateView,
+                        //onError
+                        error -> Log.d(TAG, "Error refreshing tasks", error)
+                ));
+    }
     @Override
     public void onSaveInstanceState(Bundle outState) {
         outState.putAll(mViewModel.getStateToSave());

@@ -2,24 +2,19 @@ package com.desnyki.aww.data.source;
 
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.VisibleForTesting;
+
 import android.util.Log;
 
 import com.desnyki.aww.data.Post;
-import com.desnyki.aww.data.source.local.PostsLocalDataSource;
-import com.desnyki.aww.data.source.remote.PostsRemoteDataSource;
-import com.desnyki.aww.posts.PostsViewModel;
 import com.desnyki.aww.util.schedulers.BaseSchedulerProvider;
 
-import java.io.IOException;
-import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import io.reactivex.Completable;
 import io.reactivex.Flowable;
-import io.reactivex.Observable;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -44,10 +39,17 @@ public class PostsRepository implements PostsDataSource {
     @NonNull
     private final BaseSchedulerProvider mBaseSchedulerProvider;
 
+    @VisibleForTesting
+    @Nullable
+    Map<String, Post> mCachedPosts;
+
+    @VisibleForTesting
+    boolean mCacheIsDirty = false;
+
     private PostsRepository(PostsDataSource postsDataSource,
                             PostsDataSource postsLocalDataSource,
                             BaseSchedulerProvider baseSchedulerProvider){
-
+    
         mPostsRemoteDataSource = postsDataSource;
         mPostsLocalDataSource = postsLocalDataSource;
         mBaseSchedulerProvider = baseSchedulerProvider;
@@ -68,35 +70,56 @@ public class PostsRepository implements PostsDataSource {
     @NonNull
     @Override
     public Flowable<List<Post>> getPosts() {
-        return mPostsRemoteDataSource.getPosts();
+        if (mCachedPosts != null && !mCacheIsDirty) {
+            return Flowable.fromIterable(mCachedPosts.values()).toList().toFlowable();
+        } else if (mCachedPosts == null) {
+            mCachedPosts = new LinkedHashMap<>();
+        }
+
+        Flowable<List<Post>> remotePosts = getAndSaveRemotePosts();
+
+        if (mCacheIsDirty) {
+            return remotePosts;
+        } else {
+            // Query the local storage if available. If not, query the network.
+            Flowable<List<Post>> localPosts = getAndCacheLocalPosts();
+            return Flowable.concat(localPosts, remotePosts)
+                    .filter(posts -> !posts.isEmpty())
+                    .firstOrError()
+                    .toFlowable();
+        }
+
     }
 
-    @NonNull
-    @Override
-    public Completable savePosts(@NonNull List<Post> posts) {
-        checkNotNull(posts);
-        return mPostsLocalDataSource.savePosts(posts)
-                .andThen(mPostsRemoteDataSource.savePosts(posts));
+    private Flowable<List<Post>> getAndCacheLocalPosts() {
+        return mPostsLocalDataSource.getPosts()
+                .flatMap(posts -> Flowable.fromIterable(posts)
+                        .doOnNext(post -> mCachedPosts.put(post.getId(), post))
+                        .toList()
+                        .toFlowable());
     }
 
-    @NonNull
+    private Flowable<List<Post>> getAndSaveRemotePosts() {
+        return mPostsRemoteDataSource
+                .getPosts()
+                .flatMap(posts -> Flowable.fromIterable(posts).doOnNext(post -> {
+                    mPostsLocalDataSource.savePost(post);
+                    mCachedPosts.put(post.getId(), post);
+                }).toList().toFlowable())
+                .doOnComplete(() -> mCacheIsDirty = false);
+    }
+
     @Override
-    public Completable savePost(@NonNull Post post) {
+    public void savePost(@NonNull Post post) {
         checkNotNull(post);
-        return mPostsLocalDataSource.savePost(post)
-                .andThen(mPostsRemoteDataSource.savePost(post));
+        mPostsLocalDataSource.savePost(post);
+        mPostsRemoteDataSource.savePost(post);
     }
 
+    @NonNull
     @Override
-    public Completable refreshPosts() {
-        Log.d(TAG, "refreshPosts");
-
-//        return Observable.just(0)
-//                .subscribeOn(mBaseSchedulerProvider.io())
-//                .flatMap(__ -> mPostsRemoteDataSource.getPosts()
-//                        .subscribeOn(mBaseSchedulerProvider.io())
-//                        .doOnNext(mPostsLocalDataSource::savePosts))
-//                .toCompletable();
-        return null;
+    public Flowable<List<Post>> refreshPosts() {
+        mCacheIsDirty = true;
+        return getPosts();
     }
 }

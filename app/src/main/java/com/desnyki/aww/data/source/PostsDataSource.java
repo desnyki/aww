@@ -6,10 +6,7 @@ import com.desnyki.aww.data.Post;
 
 import java.util.List;
 
-import io.reactivex.Completable;
 import io.reactivex.Flowable;
-import io.reactivex.Observable;
-
 
 /**
  * Created by desnyki on 25/01/18.
@@ -21,12 +18,8 @@ public interface PostsDataSource {
     Flowable<List<Post>> getPosts();
 
     @NonNull
-    Completable savePosts(@NonNull List<Post> posts);
+    Flowable<List<Post>> refreshPosts();
 
     @NonNull
-    Completable savePost(@NonNull Post post);
-
-    @NonNull
-    Completable refreshPosts();
-
+    void savePost(@NonNull Post post);
 }

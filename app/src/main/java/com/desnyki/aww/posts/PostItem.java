@@ -3,7 +3,8 @@ package com.desnyki.aww.posts;
 
 import com.desnyki.aww.data.Post;
 
-import rx.functions.Action0;
+import io.reactivex.functions.Action;
+
 
 /**
  * A post that should be displayed as an item in a list of posts.
@@ -13,10 +14,10 @@ final class PostItem {
 
     private Post mPost;
 
-    private Action0 mOnClickAction;
+    private Action mOnClickAction;
 
     public PostItem(Post post,
-                    Action0 onClickAction) {
+                    Action onClickAction) {
         mPost = post;
         mOnClickAction = onClickAction;
     }

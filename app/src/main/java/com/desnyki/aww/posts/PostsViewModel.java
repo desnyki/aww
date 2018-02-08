@@ -3,9 +3,6 @@ package com.desnyki.aww.posts;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.annotation.StringRes;
-import android.support.annotation.VisibleForTesting;
-import android.support.v4.util.Pair;
 import android.util.Log;
 
 import com.desnyki.aww.R;
@@ -15,13 +12,11 @@ import com.desnyki.aww.util.schedulers.BaseSchedulerProvider;
 
 import java.util.List;
 
-
-import io.reactivex.Completable;
 import io.reactivex.Flowable;
 import io.reactivex.Observable;
-import io.reactivex.disposables.Disposable;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.PublishSubject;
+
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -53,29 +48,24 @@ public class PostsViewModel {
     }
 
     @NonNull
-    public Observable<PostsUIModel> getUIModel() {
-        return getPostItems()
-                .doOnSubscribe(__ -> mLoadingIndicatorSubject.onNext(true))
-                .doOnNext(__ -> mLoadingIndicatorSubject.onNext(false))
-                .doOnError(__ -> mSnackbarText.onNext(R.string.loading_posts_error))
-                .map(this::constructPostsModel);
+    public Flowable<PostsUIModel> getUIModel() {
+        return mPostsRepository.getPosts()
+                .subscribeOn(mSchedulerProvider.computation())
+                .observeOn(mSchedulerProvider.ui())
+                .doOnNext(__ -> mLoadingIndicatorSubject.onNext(true))
+                .flatMap(Flowable::fromIterable)
+                .map(this::constructPostItem).toList().toFlowable()
+                .map(this::constructPostsModel)
+                .doOnComplete(() -> mLoadingIndicatorSubject.onNext(false))
+                .doOnError(error -> mSnackbarText.onNext(R.string.loading_posts_error));
     }
 
     @NonNull
     private PostsUIModel constructPostsModel(List<PostItem> posts) {
-        Log.d(TAG, "constructPostsModel");
-
         boolean isPostsListVisible = !posts.isEmpty();
         boolean isNoPostsViewVisible = !isPostsListVisible;
 
         return new PostsUIModel(isPostsListVisible, posts, isNoPostsViewVisible);
-    }
-    private Flowable<List<PostItem>> getPostItems() {
-        Log.d(TAG, "getPostItems");
-        return mPostsRepository.getPosts()
-                .flatMap(Flowable::fromIterable)
-                .map(this::constructPostItem).toList();
-
     }
 
     @NonNull
@@ -91,11 +81,16 @@ public class PostsViewModel {
     /**
      * Trigger a force update of the posts.
      */
-    public Completable forceUpdatePosts() {
-        Log.d(TAG, "forceUpdatePosts");
-        mLoadingIndicatorSubject.onNext(true);
+    public Flowable<PostsUIModel> refreshPosts() {
         return mPostsRepository.refreshPosts()
-                .doOnTerminate(() -> mLoadingIndicatorSubject.onNext(false));
+                .subscribeOn(mSchedulerProvider.computation())
+                .observeOn(mSchedulerProvider.ui())
+                .doOnNext(__ -> mLoadingIndicatorSubject.onNext(true))
+                .flatMap(Flowable::fromIterable)
+                .map(this::constructPostItem).toList().toFlowable()
+                .map(this::constructPostsModel)
+                .doOnComplete(() -> mLoadingIndicatorSubject.onNext(false))
+                .doOnError(error -> mSnackbarText.onNext(R.string.loading_posts_error));
     }
 
     /**

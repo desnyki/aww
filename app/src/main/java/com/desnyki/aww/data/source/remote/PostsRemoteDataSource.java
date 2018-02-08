@@ -5,7 +5,6 @@ import android.util.Log;
 
 import com.desnyki.aww.data.Post;
 import com.desnyki.aww.data.source.PostsDataSource;
-import com.desnyki.aww.data.source.PostsRepository;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -13,18 +12,15 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Callable;
 
-import okhttp3.HttpUrl;
-import okhttp3.Interceptor;
+import java.util.List;
+
+import io.reactivex.Flowable;
+
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import rx.Completable;
-import rx.Observable;
+
 
 
 /**
@@ -33,14 +29,13 @@ import rx.Observable;
 
 public class PostsRemoteDataSource implements PostsDataSource {
 
-    private static final String TAG = PostsRepository.class.getSimpleName();
+    private static final String TAG = PostsRemoteDataSource.class.getSimpleName();
 
     private static PostsRemoteDataSource INSTANCE;
 
     List<Post> posts = new ArrayList<>();
 
-    private PostsRemoteDataSource(){
-
+    private PostsRemoteDataSource() {
     }
 
     public static PostsRemoteDataSource getInstance(){
@@ -52,36 +47,23 @@ public class PostsRemoteDataSource implements PostsDataSource {
 
     @NonNull
     @Override
-    public Observable<List<Post>> getPosts() {
-        if(posts.isEmpty())
-            return Observable.fromCallable(() -> getPostImageData());
-        else
-            return Observable.from(posts).toList();
+    public Flowable<List<Post>> getPosts() {
+        return Flowable.fromCallable(this::getPostImageData);
     }
 
-    @NonNull
     @Override
-    public Completable savePosts(@NonNull List<Post> posts) {
-        return Observable.from(posts)
-                .doOnNext(this::savePost)
-                .toCompletable();
+    public void savePost(@NonNull Post post) {
     }
 
-    @NonNull
     @Override
-    public Completable savePost(@NonNull Post post) {
-        return Completable.complete();
-    }
-
-    @NonNull
-    @Override
-    public Completable refreshPosts() {
-        return Completable.complete();
+    public Flowable<List<Post>> refreshPosts() {
+        return null;
     }
 
     OkHttpClient client;
 
     public List<Post> getPostImageData(){
+        Log.d(TAG, "getPostImageData");
         final String mURI = "https://www.reddit.com/r/aww/.json";
         String mURLreturn;
         client = new OkHttpClient();
@@ -131,9 +113,11 @@ public class PostsRemoteDataSource implements PostsDataSource {
                     }
                 }
                 if(url.length()>0&&!isLocked)
-                posts.add(new Post(title,url,commentCount,upvoteCount,id));
+                    posts.add(new Post(title,url,commentCount,upvoteCount,id));
             }
+
             return posts;
+
         } catch (IOException e) {
             e.printStackTrace();
         } catch (JSONException e) {

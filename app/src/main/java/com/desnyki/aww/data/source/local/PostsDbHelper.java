@@ -9,13 +9,15 @@ import android.database.sqlite.SQLiteOpenHelper;
  */
 
 public class PostsDbHelper extends SQLiteOpenHelper {
-    public static final int DATABASE_VERSION = 2;
+    public static final int DATABASE_VERSION = 3;
 
     public static final String DATABASE_NAME = "Posts.db";
 
     private static final String TEXT_TYPE = " TEXT";
 
     private static final String BOOLEAN_TYPE = " INTEGER";
+
+    private static final String INTEGER_TYPE = " INTEGER";
 
     private static final String COMMA_SEP = ",";
 
@@ -24,8 +26,8 @@ public class PostsDbHelper extends SQLiteOpenHelper {
                     PostsPersistenceContract.PostEntry.COLUMN_NAME_ENTRY_ID + TEXT_TYPE + " PRIMARY KEY," +
                     PostsPersistenceContract.PostEntry.COLUMN_NAME_TITLE + TEXT_TYPE + COMMA_SEP +
                     PostsPersistenceContract.PostEntry.COLUMN_NAME_URL + TEXT_TYPE + COMMA_SEP +
-                    PostsPersistenceContract.PostEntry.COLUMN_NAME_COMMENT_COUNT + TEXT_TYPE + COMMA_SEP +
-                    PostsPersistenceContract.PostEntry.COLUMN_NAME_UPVOTE_COUNT + TEXT_TYPE +
+                    PostsPersistenceContract.PostEntry.COLUMN_NAME_COMMENT_COUNT + INTEGER_TYPE + COMMA_SEP +
+                    PostsPersistenceContract.PostEntry.COLUMN_NAME_UPVOTE_COUNT + INTEGER_TYPE +
                     " )";
 
     public PostsDbHelper(Context context) {

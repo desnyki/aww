@@ -45,7 +45,7 @@ ext {
     espressoVersion = '3.0.1'
     rxjavaVersion = '2.1.9'
     rxandroidVersion = '2.0.1'
-    sqlbriteVersion = '1.1.1'
+    sqlbriteVersion = '2.0.0'
     okhttpVersion = '3.9.1'
     picassoVersion = '2.5.2'
     retrofitVersion = '2.3.0'

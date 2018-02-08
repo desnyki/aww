@@ -7,22 +7,20 @@ import android.database.sqlite.SQLiteDatabase;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
-import android.util.Log;
 
 import com.desnyki.aww.data.Post;
 import com.desnyki.aww.data.source.PostsDataSource;
 import com.desnyki.aww.data.source.local.PostsPersistenceContract.PostEntry;
-import com.desnyki.aww.posts.PostsViewModel;
 import com.desnyki.aww.util.schedulers.BaseSchedulerProvider;
-import com.squareup.sqlbrite.BriteDatabase;
-import com.squareup.sqlbrite.SqlBrite;
+import com.squareup.sqlbrite2.BriteDatabase;
+import com.squareup.sqlbrite2.SqlBrite;
 
 import java.util.List;
 
 
-import io.reactivex.Completable;
-import io.reactivex.Observable;
-import rx.functions.Func1;
+import io.reactivex.BackpressureStrategy;
+import io.reactivex.Flowable;
+import io.reactivex.functions.Function;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -41,7 +39,7 @@ public class PostsLocalDataSource implements PostsDataSource {
     private final BriteDatabase mDatabaseHelper;
 
     @NonNull
-    private Func1<Cursor, Post> mPostMapperFunction;
+    private Function<Cursor, Post> mPostMapperFunction;
 
     private PostsLocalDataSource(@NonNull Context context,
                                  @NonNull BaseSchedulerProvider schedulerProvider){
@@ -52,7 +50,8 @@ public class PostsLocalDataSource implements PostsDataSource {
         mDatabaseHelper = sqlBrite.wrapDatabaseHelper(dbHelper, schedulerProvider.io());
         mPostMapperFunction = this::getPost;
     }
-    public static PostsLocalDataSource getInstance(Context context, BaseSchedulerProvider schedulerProvider){
+    public static PostsLocalDataSource getInstance(@NonNull Context context,
+                                                   @NonNull BaseSchedulerProvider schedulerProvider){
         if(INSTANCE == null){
             INSTANCE = new PostsLocalDataSource(context, schedulerProvider);
         }
@@ -76,7 +75,7 @@ public class PostsLocalDataSource implements PostsDataSource {
 
     @NonNull
     @Override
-    public Observable<List<Post>> getPosts() {
+    public Flowable<List<Post>> getPosts() {
         String[] projection = {
                 PostEntry.COLUMN_NAME_ENTRY_ID,
                 PostEntry.COLUMN_NAME_TITLE,
@@ -86,44 +85,15 @@ public class PostsLocalDataSource implements PostsDataSource {
         };
         String sql = String.format("SELECT %s FROM %s", TextUtils.join(",", projection), PostEntry.TABLE_NAME);
         return mDatabaseHelper.createQuery(PostEntry.TABLE_NAME, sql)
-                .mapToList(mPostMapperFunction);
+                .mapToList(mPostMapperFunction)
+                .toFlowable(BackpressureStrategy.BUFFER);
     }
 
-    @NonNull
     @Override
-    public Completable savePosts(@NonNull List<Post> posts) {
-        checkNotNull(posts);
-        Log.d(TAG, "savePosts");
-        return Observable.using(mDatabaseHelper::newTransaction,
-                transaction -> inTransactionInsert(posts, transaction),
-                BriteDatabase.Transaction::end)
-                .toCompletable();
-    }
-
-    @NonNull
-    @Override
-    public Completable savePost(@NonNull Post post) {
+    public void savePost(@NonNull Post post) {
         checkNotNull(post);
-        return Completable.fromAction(() -> {
-            ContentValues values = toContentValues(post);
-            mDatabaseHelper.insert(PostEntry.TABLE_NAME, values, SQLiteDatabase.CONFLICT_REPLACE);
-        });
-    }
-
-    @NonNull
-    private Observable<List<Post>> inTransactionInsert(@NonNull List<Post> posts,
-                                                       @NonNull BriteDatabase.Transaction transaction) {
-        checkNotNull(posts);
-        checkNotNull(transaction);
-        Log.d(TAG, "inTransactionInsert");
-
-        return Observable.from(posts)
-                .doOnNext(post -> {
-                    ContentValues values = toContentValues(post);
-                    mDatabaseHelper.insert(PostEntry.TABLE_NAME, values);
-                })
-                .doOnCompleted(transaction::markSuccessful)
-                .toList();
+        ContentValues values = toContentValues(post);
+        mDatabaseHelper.insert(PostEntry.TABLE_NAME, values, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
     private ContentValues toContentValues(Post post) {
@@ -135,11 +105,9 @@ public class PostsLocalDataSource implements PostsDataSource {
         values.put(PostEntry.COLUMN_NAME_COMMENT_COUNT, post.getCommentCount());
         return values;
     }
-    
-    @NonNull
-    @Override
-    public Completable refreshPosts() {
-        return Completable.complete();
+
+    public Flowable<List<Post>> refreshPosts() {
+        return null;
     }
 
 }
