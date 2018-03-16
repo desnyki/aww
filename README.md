@@ -4,7 +4,7 @@ This app downloads reddit posts from /r/aww and displays them in a list using th
 
 <img src="https://i.imgur.com/cuprkZR.jpg" width="360" height="640">
 
-## Libraries 
+## Technologies 
 
 * MVVM
 * SQLBrite
