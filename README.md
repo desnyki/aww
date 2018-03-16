@@ -14,7 +14,3 @@ This app downloads reddit posts from /r/aww and displays them in a list using th
 ## Credit
 
  * [Android Architecture Blueprints](https://github.com/googlesamples/android-architecture)
-
-## TODO
-
-Tests
